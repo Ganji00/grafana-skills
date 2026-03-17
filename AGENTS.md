@@ -14,12 +14,13 @@ Skills cover Grafana, Prometheus, Loki, Tempo, Pyroscope, k6, and the broader LG
 ```
 .claude-plugin/marketplace.json    # Claude Code marketplace manifest
 .cursor-plugin/marketplace.json    # Cursor marketplace manifest (identical content)
-skills/                            # All skills (flat, one directory per skill)
-  <skill-name>/
-    SKILL.md                       # Required: skill definition
-    scripts/                       # Optional: executable helper scripts
-    references/                    # Optional: reference docs loaded on demand
-    assets/                        # Optional: templates, schemas, data files
+skills/                            # All skills, grouped by plugin
+  <plugin-name>/
+    <skill-name>/
+      SKILL.md                     # Required: skill definition
+      scripts/                     # Optional: executable helper scripts
+      references/                  # Optional: reference docs loaded on demand
+      assets/                      # Optional: templates, schemas, data files
 template/SKILL.md                  # Starter template for contributors
 scripts/lint-skills.sh             # Validates SKILL.md files
 ```
@@ -72,9 +73,10 @@ Usage: `/greet Alice` → "Hello, Alice!"
 
 ## When Adding New Skills
 
-1. Create `skills/<skill-name>/SKILL.md` following the template at `template/SKILL.md`
+1. Create `skills/<plugin-name>/<skill-name>/SKILL.md` following the template at `template/SKILL.md`
+   - Plugin groups: `grafana-core`, `grafana-cloud`, `grafana-plugins`
 2. Use the spec: name (lowercase, hyphens, max 64 chars), description (max 1024 chars, include "Use when...")
-3. Run `./scripts/lint-skills.sh skills` to validate
+3. Run `./scripts/lint-skills.sh skills/<plugin-name>` to validate
 4. Register the skill in both marketplace files under the appropriate plugin group
 5. Update `README.md` to list the new skill
 
@@ -89,7 +91,7 @@ Reference scripts using relative paths from the skill directory, or use `${CLAUD
 plugin-root-relative paths when installed via Claude Code:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/skills/your-skill/scripts/your-script"
+"${CLAUDE_PLUGIN_ROOT}/skills/grafana-core/your-skill/scripts/your-script"
 ```
 
 ## Skill Writing Guidelines

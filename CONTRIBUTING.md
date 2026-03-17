@@ -14,24 +14,26 @@ Cursor, and other compatible tools.
 grafana-skills/
 ├── .claude-plugin/marketplace.json   # Claude Code marketplace (lists plugin groups)
 ├── .cursor-plugin/marketplace.json   # Cursor marketplace (identical content)
-├── skills/                           # All skills live here (flat structure)
-│   └── <skill-name>/SKILL.md
+├── skills/                           # All skills, grouped by plugin
+│   └── <plugin-name>/<skill-name>/SKILL.md
 ├── template/SKILL.md                 # Starter template
 └── scripts/lint-skills.sh            # Local validation
 ```
 
 - **Single source of truth**: All skill content lives in `skills/`. Both Claude Code and Cursor
   reference the same files via their respective marketplace manifests.
-- **Flat structure**: Each skill is a directory directly under `skills/`, no nesting.
+- **Grouped by plugin**: Skills are organized under `skills/<plugin-name>/` matching the plugin
+  groups in the marketplace manifests (`grafana-core`, `grafana-cloud`, `grafana-plugins`).
 
 ## Adding a New Skill
 
 ### Step 1: Create the SKILL.md
 
-Copy `template/SKILL.md` to a new directory under `skills/`:
+Copy `template/SKILL.md` to a new directory under the appropriate plugin group:
 
 ```bash
-cp -r template/SKILL.md skills/your-skill-name/SKILL.md
+# Choose the right group: grafana-core, grafana-cloud, or grafana-plugins
+cp -r template/SKILL.md skills/grafana-core/your-skill-name/SKILL.md
 ```
 
 Fill in the frontmatter and content. See [SKILL.md format](#skillmd-format) below.
@@ -40,18 +42,17 @@ Fill in the frontmatter and content. See [SKILL.md format](#skillmd-format) belo
 
 ```bash
 # Lint against the Agent Skills spec (checks frontmatter, naming, line count, etc.)
-./scripts/lint-skills.sh skills
+./scripts/lint-skills.sh skills/grafana-core
 
 # Optional: validate using the official skills-ref tool
-npx skills-ref validate skills/your-skill-name
+npx skills-ref validate skills/grafana-core/your-skill-name
 ```
 
 Fix any errors or warnings before opening a PR.
 
 ### Step 3: Register in the marketplace (optional but recommended)
 
-If your skill fits an existing plugin group (`grafana-core`, `grafana-observability`, `grafana-testing`),
-add it to the `skills` array in **both** marketplace files:
+Add the skill path to the appropriate plugin's `skills` array in **both** marketplace files:
 
 ```json
 // .claude-plugin/marketplace.json  AND  .cursor-plugin/marketplace.json
@@ -59,7 +60,7 @@ add it to the `skills` array in **both** marketplace files:
   "plugins": [
     {
       "name": "grafana-core",
-      "skills": ["./skills/your-skill-name"]   // add here
+      "skills": ["./skills/grafana-core/your-skill-name"]   // add here
     }
   ]
 }
@@ -153,7 +154,7 @@ Do not include:
 
 ## Adding a New Plugin Group
 
-If your skill doesn't fit `grafana-core`, `grafana-observability`, or `grafana-testing`, you can propose
+If your skill doesn't fit `grafana-core`, `grafana-cloud`, or `grafana-plugins`, you can propose
 a new group by adding it to both marketplace files and updating [README.md](README.md).
 
 New groups should represent a coherent, installable collection of related skills.

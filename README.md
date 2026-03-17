@@ -17,6 +17,8 @@ claude plugin marketplace add grafana/skills
 
 # Install the plugin(s) you want
 claude plugin install grafana-plugins@grafana-skills
+claude plugin install grafana-core@grafana-skills
+claude plugin install grafana-cloud@grafana-skills
 ```
 
 ### Cursor
@@ -41,7 +43,19 @@ npx skills add grafana/skills
 
 ## Available Skills
 
-Skills are organized into logical groups (plugins) for installation purposes. All skill files live in `skills/`.
+Skills are organized into plugin groups. All skill files live under `skills/<plugin-name>/`.
+
+### grafana-core
+
+Core Grafana concepts — dashboards, panels, PromQL, and visualization.
+
+*Coming soon.*
+
+### grafana-cloud
+
+Grafana Cloud — Loki, Tempo, Pyroscope, and the LGTM observability stack.
+
+*Coming soon.*
 
 ### grafana-plugins
 
@@ -50,6 +64,7 @@ Skills for building Grafana plugins — bundle optimisation, code splitting, and
 | Skill | Description |
 |-------|-------------|
 | `plugin-bundle-size` | Optimise Grafana app plugin bundle size using React.lazy, Suspense, and webpack code splitting |
+| `react-19-plugin-migration` | Migrate a Grafana plugin to React 19 compatibility |
 
 ---
 
@@ -70,8 +85,12 @@ Quick start:
 grafana-skills/
 ├── .claude-plugin/marketplace.json   # Claude Code marketplace manifest
 ├── .cursor-plugin/marketplace.json   # Cursor marketplace manifest (identical)
-├── skills/                           # All skills (flat, one dir per skill)
-│   └── <skill-name>/SKILL.md
+├── skills/                           # All skills, grouped by plugin
+│   ├── grafana-core/
+│   ├── grafana-cloud/
+│   └── grafana-plugins/
+│       ├── plugin-bundle-size/SKILL.md
+│       └── react-19-plugin-migration/SKILL.md
 ├── template/SKILL.md                 # Starter template for new skills
 ├── scripts/lint-skills.sh            # Local skill validation
 └── .github/workflows/                # CI validation
