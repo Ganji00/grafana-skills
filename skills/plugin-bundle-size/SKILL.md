@@ -1,5 +1,6 @@
 ---
 name: plugin-bundle-size
+license: Apache-2.0
 description:
   Optimise Grafana app plugin bundle size using React.lazy, Suspense, and webpack code splitting.
   Use when the user asks to reduce plugin bundle size, optimise module.js, add code splitting,
@@ -34,7 +35,7 @@ When in doubt, stop after Priority 2. Routes alone typically reduce `module.js` 
 
 ## Step 1: Add bundle size CI reporting (recommended)
 
-Add the `grafana/plugin-actions/bundle-size` action to get automatic bundle size comparison comments on every PR. This posts a table showing entry point size changes, file count diffs, and total bundle impact — making regressions visible before merge.
+Add the `grafana/plugin-actions/bundle-size` action to get automatic bundle size comparison comments on every PR. This posts a table showing entry point size changes, file count diffs, and total bundle impact.
 
 **Root-level plugins** (plugin at repo root):
 
@@ -71,16 +72,6 @@ jobs:
 The action's install step runs at the repo root and cannot find `yarn.lock` in a subdirectory. Work around this by installing deps yourself and symlinking to root:
 
 ```yaml
-# .github/workflows/bundle-size.yml
-name: Bundle Size
-on:
-  pull_request:
-    paths: ["plugin/**"]
-  push:
-    branches: [main]
-    paths: ["plugin/**"]
-  workflow_dispatch:
-
 jobs:
   bundle-size:
     runs-on: ubuntu-latest
@@ -94,31 +85,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: ./plugin/.nvmrc
-
       - name: Install dependencies
         working-directory: ./plugin
         run: yarn install
-
       - name: Symlink plugin to root for bundle-size action
         run: |
           ln -s plugin/yarn.lock yarn.lock
           ln -s plugin/package.json package.json
           ln -s plugin/.yarnrc.yml .yarnrc.yml
           ln -s plugin/node_modules node_modules
-
       - name: Bundle Size
         uses: grafana/plugin-actions/bundle-size@a66a1c96cdbb176f9cccf10cf23593e250db7cce # bundle-size/v1.1.0
         with:
           working-directory: ./plugin
 ```
 
-**How it works:**
-- On **push to main**: builds and uploads a `main-branch-stats` artifact as baseline
-- On **PRs**: builds the PR, downloads the baseline, compares, and posts a comment
-- First run on main generates the baseline — use `workflow_dispatch` to trigger manually after adding the workflow
-- The `threshold` input (default `5`) controls whether the comment is posted (only when entry point diff exceeds N%)
+**How it works:** On push to main, builds and uploads a baseline artifact. On PRs, compares against it and posts a diff comment. Use `workflow_dispatch` to generate the first baseline.
 
-**Reference:** [grafana-k8s-plugin workflow](https://github.com/grafana/grafana-k8s-plugin/blob/main/.github/workflows/grafana.yml) (root-level example)
+**Reference:** [grafana-k8s-plugin workflow](https://github.com/grafana/grafana-k8s-plugin/blob/main/.github/workflows/grafana.yml)
 
 ---
 
@@ -134,12 +118,9 @@ ls src/module.ts src/module.tsx 2>/dev/null
 # Measure the current PRODUCTION bundle size BEFORE making any changes
 # Dev builds are unminified and much larger — always measure production
 yarn build 2>/dev/null || npm run build
-echo "=== module.js ==="
-ls -lah dist/module.js
-echo "=== all JS chunks ==="
-ls -lah dist/*.js | sort -k5 -rh | head -20
-echo "=== chunk count ==="
-ls dist/*.js | wc -l
+echo "=== module.js ===" && ls -lah dist/module.js
+echo "=== all JS chunks ===" && ls -lah dist/*.js | sort -k5 -rh | head -20
+echo "=== chunk count ===" && ls dist/*.js | wc -l
 ```
 
 Record the baseline. A pre-split plugin commonly has a `module.js` of 1–3 MB with no other JS chunks.
@@ -151,226 +132,119 @@ Record the baseline. A pre-split plugin commonly has a `module.js` of 1–3 MB w
 The `@grafana/create-plugin` tool controls `.config/webpack/`, `.config/jest/`, and other build scaffolding. Updating it often unlocks faster SWC compilation and better chunk output.
 
 ```bash
-# Check current version
 cat .config/.cprc.json 2>/dev/null || grep '"@grafana/create-plugin"' package.json
-
-# Get the latest version
 npm view @grafana/create-plugin version
-
-# Update if outdated
 npx @grafana/create-plugin@latest update
 ```
 
-After updating, review the diff (especially `.config/webpack/webpack.config.ts`) and run a test build before proceeding. If the update introduces breaking changes, fix them first.
-
-> **Custom webpack configs:** If the plugin has a top-level `webpack.config.ts` that `webpack-merge`s the scaffolded base config, review the merge carefully after updating — custom rules or plugins may conflict with new scaffolding.
+After updating, review the diff (especially `.config/webpack/webpack.config.ts`) and run a test build. If the plugin has a top-level `webpack.config.ts` that `webpack-merge`s the base config, review the merge for conflicts.
 
 ---
 
 ## Step 4: Analyse the codebase — find what to split
 
-Read these files in order of impact. Do **not** start implementing until you have read all of them.
+Do **not** start implementing until you have read all of these.
 
-**Entry point:**
 ```bash
+# Entry point — look for direct (non-lazy) imports of App, ConfigPage, exposeComponent targets
 cat src/module.ts 2>/dev/null || cat src/module.tsx
-```
-Look for: direct (non-lazy) imports of `App`, `ConfigPage`, and any `exposeComponent` / `addComponent` targets.
 
-**Root App component:**
-```bash
-# Common locations
+# Root App component — look for direct page/route imports that should be lazy
 cat src/App.tsx src/components/App.tsx src/feature/app/components/App.tsx 2>/dev/null | head -80
-```
-Look for: direct imports of page/route components that should be lazy-loaded.
 
-**Extension registrations:**
-```bash
+# Extension registrations — each should become an independent chunk
 grep -r "exposeComponent\|addComponent\|addLink" src/ --include="*.ts" --include="*.tsx" -n
-```
-Every component registered here is loaded by *other* Grafana apps — each should be an independent chunk.
 
-**Component registries:**
-```bash
-# Arrays of objects that contain React components
-grep -rn "component:" src/ --include="*.ts" --include="*.tsx" | grep -v "node_modules" | head -20
-```
-
-**Exported side-effect singletons:**
-```bash
-# Values initialised and exported at module level (e.g. Faro, analytics clients)
+# Exported side-effect singletons (Faro, analytics) — must be extracted before splitting
 grep -n "^export const\|^export let" src/module.ts src/module.tsx 2>/dev/null
-# Find all files that import from module.ts — these create circular deps after splitting
 grep -rn "from '.*module'" src/ --include="*.ts" --include="*.tsx" | grep -v node_modules
-```
-Look for: `export const faro = initializeFaro()` or similar. These **must** be extracted to a dedicated file before lazy-loading (see Step 4 Priority 1 note on singletons).
 
-**Heavy synchronous imports:**
-```bash
-# Libraries that are large and only needed in specific pages
+# Heavy synchronous imports
 grep -rn "from 'monaco-editor\|@codemirror\|d3\b\|recharts\|chart\.js" \
   src/ --include="*.ts" --include="*.tsx" | grep -v node_modules
 ```
 
-Now prioritise. A good rule: if a file is imported by `module.ts` directly (even transitively), it ends up in `module.js`. Everything reachable from the lazy boundary is its own chunk.
+**Key rule:** If a file is imported by `module.ts` directly (even transitively), it ends up in `module.js`. Everything reachable from a lazy boundary becomes its own chunk.
 
 ---
 
 ## Step 5: Implement splits — in priority order
 
-> **Named vs default exports:** `React.lazy()` requires the target module to have a `default` export. Most Grafana plugin components use **named exports** — these need a `.then()` re-map:
+> **Named vs default exports:** `React.lazy()` requires a `default` export. Most Grafana plugin components use named exports — use `.then()` to re-map:
 > ```ts
-> // Named export (e.g. export function MyComponent)
-> const LazyMyComp = lazy(() =>
->   import('./MyComponent').then(m => ({ default: m.MyComponent }))
-> );
->
-> // Default export — works directly
+> // Named export
+> const LazyMyComp = lazy(() => import('./MyComponent').then(m => ({ default: m.MyComponent })));
+> // Default export
 > const LazyMyComp = lazy(() => import('./MyComponent'));
 > ```
-> When creating new extension or page files, prefer `export default` so the `lazy()` call stays clean. For existing files with named exports, use `.then()`.
 
 ### Priority 1: module.tsx (highest impact, always do this first)
 
-If the entry point is `module.ts`, rename it:
-```bash
-git mv src/module.ts src/module.tsx
-```
+If the entry point is `module.ts`, rename it: `git mv src/module.ts src/module.tsx`
 
 Make `module.tsx` import **nothing** from feature code except through `lazy()`:
 
 ```tsx
-// src/module.tsx
 import React, { lazy, Suspense } from 'react';
 import { AppPlugin, AppRootProps } from '@grafana/data';
 import { LoadingPlaceholder } from '@grafana/ui';
 
-// Use `import type` for prop interfaces — this is erased at compile time
-// and does NOT pull the component module into the eager bundle
-import type { MyExtensionProps } from './extensions/MyExtension';
+import type { MyExtensionProps } from './extensions/MyExtension';  // import type — erased at compile time
 import type { JsonData } from './features/app/state/slice';
 
-// ── Faro (lazy init — keeps @grafana/faro-react out of module.js) ────────────
+// Lazy Faro init — keeps @grafana/faro-react out of module.js
 let faroInitialized = false;
 async function initFaro() {
-  if (faroInitialized) {
-    return;
-  }
+  if (faroInitialized) { return; }
   faroInitialized = true;
   const { initializeFaro } = await import('faro');
   initializeFaro();
 }
 
-// ── Root page ─────────────────────────────────────────────────────────────────
 const LazyApp = lazy(async () => {
   await initFaro();
   return import('./features/app/App').then(m => ({ default: m.App }));
 });
 
 function App(props: AppRootProps<JsonData>) {
-  return (
-    <Suspense fallback={<LoadingPlaceholder text="" />}>
-      <LazyApp {...props} />
-    </Suspense>
-  );
+  return <Suspense fallback={<LoadingPlaceholder text="" />}><LazyApp {...props} /></Suspense>;
 }
 
-// ── Extension components ──────────────────────────────────────────────────────
 const LazyMyExtension = lazy(() =>
   import('./extensions/MyExtension').then(m => ({ default: m.MyExtension }))
 );
-
 function MyExtension(props: MyExtensionProps) {
-  return (
-    <Suspense fallback={<LoadingPlaceholder text="" />}>
-      <LazyMyExtension {...props} />
-    </Suspense>
-  );
+  return <Suspense fallback={<LoadingPlaceholder text="" />}><LazyMyExtension {...props} /></Suspense>;
 }
 
-// ── Plugin registration ───────────────────────────────────────────────────────
-// Pass the JsonData generic so setRootPage() types match the App wrapper
 export const plugin = new AppPlugin<JsonData>().setRootPage(App);
-
-plugin.exposeComponent({
-  id: 'my-plugin/my-extension/v1',
-  title: 'My Extension',
-  component: MyExtension,
-});
+plugin.exposeComponent({ id: 'my-plugin/my-extension/v1', title: 'My Extension', component: MyExtension });
 ```
 
 **Key details:**
-
-- **`import type` for props:** Always use `import type` when importing interfaces or types for the lazy wrapper's props. A regular import creates a real module dependency that webpack follows, pulling the component code into the eager bundle and defeating the split.
-- **`AppPlugin<JsonData>` generic:** If the original App component uses `AppRootProps<JsonData>` (a custom type for `plugin.json` settings), pass that generic to `AppPlugin<JsonData>()`. Without it, `setRootPage()` expects `AppRootProps<KeyValue<any>>` which won't match.
-- **Remove the `ComponentClass` type cast:** If the original `module.ts` used `App as unknown as ComponentClass<AppRootProps>`, remove the cast entirely. The lazy wrapper `function App(props)` is a valid React function component and `setRootPage()` accepts it directly.
+- `import type` for props prevents webpack from following the import into the eager bundle
+- Use `new AppPlugin<JsonData>()` if App uses `AppRootProps<JsonData>` — without the generic, `setRootPage()` type won't match
+- Remove any `App as unknown as ComponentClass<AppRootProps>` cast — the lazy wrapper is a valid function component
 
 **Expected impact:** `module.js` drops from MB range to ~50–200 KB.
 
----
-
-### Side note: singletons (e.g. Faro) — lazy init, not eager
-
-If `module.ts` has a synchronous Faro init like `export const faro = initializeFaro()`, do **not** keep it as a top-level import in `module.tsx`. That pulls the entire `@grafana/faro-react` library into `module.js`.
-
-Instead, **dynamically import and initialise Faro inside the `lazy()` callback**, before the App import resolves. This moves the Faro library into the App chunk:
-
-```tsx
-// src/module.tsx — Faro initialises lazily, before App renders
-let faroInitialized = false;
-async function initFaro() {
-  if (faroInitialized) {
-    return;
-  }
-  faroInitialized = true;
-  const { initializeFaro } = await import('faro');
-  initializeFaro();
-}
-
-const LazyApp = lazy(async () => {
-  await initFaro();
-  return import('./features/app/App').then((m) => ({ default: m.App }));
-});
-```
-
-This pattern ensures:
-1. `@grafana/faro-react` and its deps stay **out of `module.js`** — they load with the App chunk
-2. Faro initialises **before** any component renders (it runs inside `lazy()` before the App import resolves)
-3. The `faroInitialized` guard prevents double-init if the lazy factory runs again
-
-**If other source files import the Faro instance from `module.ts`** (e.g. `import { faro } from '../module'`), first check:
-
-```bash
-grep -rn "from '.*module'" src/ --include="*.ts" --include="*.tsx" | grep -v node_modules
-```
-
-If files import from `module.ts`, extract the singleton to a dedicated file before renaming:
-
-1. Move to `src/faro.ts` (or if it's already in a separate file like `src/faro/index.ts`, skip this)
-2. Update internal imports from `'*/module'` → `'*/faro'`
-3. In `module.tsx`, use the lazy `initFaro()` pattern above instead of importing and re-exporting
+**Singletons (e.g. Faro):** If `module.ts` has `export const faro = initializeFaro()`, do NOT keep it as a top-level import. Extract it to `src/faro.ts`, update all internal imports from `'*/module'` → `'*/faro'`, then use the dynamic `initFaro()` pattern above.
 
 ---
 
 ### Priority 2: Route-based splitting in App.tsx
 
-Replace every direct import of a page component with `lazy()`:
-
 ```tsx
-// src/components/App.tsx
 import React, { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { LoadingPlaceholder } from '@grafana/ui';
 
-// One lazy() per route — each becomes its own JS chunk
 const HomePage     = lazy(() => import('../pages/Home'));
 const SettingsPage = lazy(() => import('../pages/Settings'));
 const DetailPage   = lazy(() => import('../pages/Detail'));
-// ... add one per route
 
 function App(props: AppRootProps) {
   return (
-    // A single Suspense at the Routes level is enough — no need for one per route
     <Suspense fallback={<LoadingPlaceholder text="" />}>
       <Routes>
         <Route path="home"       element={<HomePage />} />
@@ -381,218 +255,71 @@ function App(props: AppRootProps) {
     </Suspense>
   );
 }
-
 export default App;
 ```
 
-**Bypass barrel files:** When a component is re-exported through an `index.ts` barrel, target the actual component file in the `import()`, not the barrel. If the barrel re-exports multiple things, importing it pulls them all into the same chunk:
+**Bypass barrel files:** Target the actual component file in the `import()`, not an `index.ts` barrel that re-exports multiple things:
 
 ```tsx
-// Risky — barrel may re-export other heavy modules into this chunk
+// Risky — barrel may pull in other heavy modules
 const Catalog = lazy(() => import('features/catalog'));
-
-// Better — only pulls in the Catalog component's tree
-const Catalog = lazy(() =>
-  import('features/catalog/Catalog').then(m => ({ default: m.Catalog }))
-);
+// Better — only pulls in Catalog's tree
+const Catalog = lazy(() => import('features/catalog/Catalog').then(m => ({ default: m.Catalog })));
 ```
 
 ### Priority 3: Extension components
 
-Each extension file should `export default` its component so webpack can split it cleanly. If it needs context (e.g. `AppProviders`), include that in the export:
+Each extension should `export default` its component. Use `fallback={null}` for extensions that load quickly:
 
 ```tsx
 // src/extensions/MyExtension.tsx
-import React from 'react';
-import { AppProviders } from '../components/AppProviders';
-
-function MyExtensionContent(props: MyExtensionProps) {
-  return <div>...</div>;
-}
-
-// Default export wraps with providers so the lazy consumer in module.tsx stays simple
 export default function MyExtension(props: MyExtensionProps) {
-  return (
-    <AppProviders>
-      <MyExtensionContent {...props} />
-    </AppProviders>
-  );
+  return <AppProviders><MyExtensionContent {...props} /></AppProviders>;
 }
 ```
 
-**`fallback={null}` for extensions:** Extension components often load quickly; a `<LoadingPlaceholder>` flash is more disruptive than no indicator. Use `fallback={null}` unless the component is genuinely slow:
+**Surgical split:** If an extension wrapper must stay eager in `module.tsx`, lazy-load the heavy component it renders:
 
 ```tsx
-function MyExtension(props: MyExtensionProps) {
-  return (
-    <Suspense fallback={null}>
-      <LazyMyExtension {...props} />
-    </Suspense>
-  );
+const HeavyInner = lazy(() => import('components/features/HeavyInner'));
+export function MyExtension() {
+  return <Suspense fallback={<LoadingPlaceholder text="" />}><HeavyInner /></Suspense>;
 }
 ```
 
-**Surgical split — lazy-load the inner component, not the wrapper:** If the extension wrapper must stay eager in `module.tsx` (e.g. it has complex props setup), lazy-load the heavy component it renders instead of restructuring the entry point:
+### Priority 4: Component registries and tab panels
+
+For arrays of objects containing React components (e.g. tab panels), lazy-load each entry. **Critical:** ensure a `<Suspense>` boundary exists where the component renders.
 
 ```tsx
-// src/components/Extensions/MyHeavyExtension.tsx
-// The wrapper is still imported eagerly in module.tsx — only the heavy inner component is lazy
-import React, { lazy, Suspense } from 'react';
-import { LoadingPlaceholder } from '@grafana/ui';
-
-const HeavyInnerComponent = lazy(() => import('components/features/HeavyInnerComponent'));
-
-export function MyHeavyExtension() {
-  return (
-    <Suspense fallback={<LoadingPlaceholder text="" />}>
-      <HeavyInnerComponent />
-    </Suspense>
-  );
-}
-```
-
-This is the right approach when you can't restructure `module.tsx` but one extension pulls in a disproportionately large component tree.
-
-### Priority 4: Component registries and tab panels (if present)
-
-If you have an array of objects containing React components (e.g. tab panels on a details page), apply lazy loading per entry. This is **moderate risk** — verify a `<Suspense>` boundary exists where the component is rendered.
-
-**Tab panel example:**
-
-```tsx
-// Before — all tab components load upfront even though only one is shown at a time
-import { ConfigurationDetails } from './ConfigurationDetails';
-import { ConnectorOverview } from './ConnectorOverview';
-import { Metrics } from './Metrics';
+const ConfigDetails = lazy(() => import('./ConfigDetails/ConfigDetails').then(m => ({ default: m.ConfigDetails })));
+const Overview      = lazy(() => import('./Overview/Overview').then(m => ({ default: m.Overview })));
 
 const tabs = [
-  { id: 'overview', component: ConnectorOverview },
-  { id: 'config',   component: ConfigurationDetails },
-  { id: 'metrics',  component: Metrics },
+  { id: 'overview', component: Overview },
+  { id: 'config',   component: ConfigDetails },
 ];
 
-// After — each tab component loads only when selected
-const ConfigurationDetails = lazy(() =>
-  import('./ConfigurationDetails/ConfigurationDetails').then(m => ({ default: m.ConfigurationDetails }))
-);
-const ConnectorOverview = lazy(() =>
-  import('./ConnectorOverview/ConnectorOverview').then(m => ({ default: m.ConnectorOverview }))
-);
-const Metrics = lazy(() => import('./Metrics').then(m => ({ default: m.Metrics })));
-
-const tabs = [
-  { id: 'overview', component: ConnectorOverview },
-  { id: 'config',   component: ConfigurationDetails },
-  { id: 'metrics',  component: Metrics },
-];
+// In the parent that renders the active tab:
+<Suspense fallback={<LoadingPlaceholder text="" />}>
+  {ActiveTab && <ActiveTab />}
+</Suspense>
 ```
 
-**Critical: add a Suspense boundary where the tab content renders:**
-
-```tsx
-// In the parent component that renders the active tab
-<TabContent>
-  <Suspense fallback={<LoadingPlaceholder text="" />}>
-    {ActiveTab && <ActiveTab />}
-  </Suspense>
-</TabContent>
-```
-
-`React.lazy()` returns a valid component reference that can be stored in arrays and rendered later — no special handling needed in the registry itself. The Suspense boundary just needs to exist somewhere above the render point.
-
-**General component registry example:**
-
-```tsx
-const LazyConfigEditor = lazy(() => import('./editors/ConfigEditor'));
-const LazyQueryEditor  = lazy(() => import('./editors/QueryEditor'));
-
-const panels = [
-  {
-    id: 'config',
-    component: (props: ConfigEditorProps) => (
-      <Suspense fallback={<LoadingPlaceholder text="" />}>
-        <LazyConfigEditor {...props} />
-      </Suspense>
-    ),
-  },
-  {
-    id: 'query',
-    component: (props: QueryEditorProps) => (
-      <Suspense fallback={<LoadingPlaceholder text="" />}>
-        <LazyQueryEditor {...props} />
-      </Suspense>
-    ),
-  },
-];
-```
-
-### Datasource plugins: setConfigEditor, setQueryEditor, and support editors
-
-Datasource plugins (type: `"datasource"`) apply the same pattern to `setConfigEditor()`, `setQueryEditor()`, and the `editor`/`QueryEditor` fields on `VariableSupport` and `AnnotationSupport`. Rename `module.ts` → `module.tsx` and lazy-load all four:
-
-```tsx
-// src/module.tsx (datasource plugin)
-import React, { Suspense } from 'react';
-import { DataSourcePlugin } from '@grafana/data';
-import { DataSource, DSOptions } from './datasource';
-import { Query } from './types';
-import type { KGQueryEditorProps } from './components/QueryEditor';
-
-// Named exports → re-map to default with .then()
-const LazyConfigEditor = React.lazy(() =>
-  import('./components/ConfigEditor').then(m => ({ default: m.ConfigEditor }))
-);
-const LazyQueryEditor = React.lazy(() =>
-  import('./components/QueryEditor').then(m => ({ default: m.QueryEditor }))
-);
-
-function ConfigEditor(props: DataSourcePluginOptionsEditorProps<DSOptions>) {
-  return <Suspense fallback={null}><LazyConfigEditor {...props} /></Suspense>;
-}
-function QueryEditor(props: KGQueryEditorProps) {
-  return <Suspense fallback={null}><LazyQueryEditor {...props} /></Suspense>;
-}
-
-export const plugin = new DataSourcePlugin<DataSource, Query, DSOptions>(DataSource)
-  .setConfigEditor(ConfigEditor)
-  .setQueryEditor(QueryEditor);
-```
-
-For **VariableSupport** and **AnnotationSupport**, rename the `.ts` file to `.tsx` and assign the lazy-wrapped component:
-
-```tsx
-// src/datasource/VariableSupport.tsx (renamed from .ts)
-import React, { Suspense } from 'react';
-import type { VariableQueryEditorProps } from './components/VariableQueryEditor';
-
-const LazyVariableQueryEditor = React.lazy(() =>
-  import('./components/VariableQueryEditor').then(m => ({ default: m.VariableQueryEditor }))
-);
-function VariableQueryEditorWithSuspense(props: VariableQueryEditorProps) {
-  return <Suspense fallback={null}><LazyVariableQueryEditor {...props} /></Suspense>;
-}
-
-export class MyVariableSupport extends CustomVariableSupport<DataSource, MyVariableQuery> {
-  editor = VariableQueryEditorWithSuspense;
-  // ...
-}
-```
-
-Same pattern for `AnnotationSupport.QueryEditor`. Use `import type` for props interfaces to avoid pulling the component into the module's eager load.
+For **datasource plugins** (`setConfigEditor`, `setQueryEditor`, `VariableSupport`, `AnnotationSupport`), see [references/datasource-plugins.md](references/datasource-plugins.md).
 
 ---
 
 ## Step 6: Group related chunks if over-splitting
 
-If the build produces more than ~25 JS files, use webpack magic comments to group related pages into a single chunk:
+If the build produces more than ~25 JS files, use webpack magic comments:
 
 ```tsx
-// These two pages land in the same "fleet.js" chunk
 const FleetList   = lazy(() => import(/* webpackChunkName: "fleet" */ '../pages/FleetList'));
 const FleetDetail = lazy(() => import(/* webpackChunkName: "fleet" */ '../pages/FleetDetail'));
 ```
 
-Use one `webpackChunkName` per logical feature area. Don't group unrelated pages — the point is to load code only when needed.
+One `webpackChunkName` per logical feature area. Don't group unrelated pages.
 
 ---
 
@@ -600,68 +327,33 @@ Use one `webpackChunkName` per logical feature area. Don't group unrelated pages
 
 ```bash
 yarn build 2>/dev/null || npm run build
-
-echo "=== module.js ==="
-ls -lah dist/module.js
-
-echo "=== all JS chunks (largest first) ==="
-ls -lah dist/*.js | sort -k5 -rh | head -30
-
-echo "=== chunk count ==="
-ls dist/*.js | wc -l
+echo "=== module.js ===" && ls -lah dist/module.js
+echo "=== all JS chunks (largest first) ===" && ls -lah dist/*.js | sort -k5 -rh | head -30
+echo "=== chunk count ===" && ls dist/*.js | wc -l
 ```
-
-**Healthy outcome:**
 
 | Metric | Target |
 |---|---|
 | `module.js` size | < 200 KB |
 | Total JS chunk count | 15–25 |
 | Largest single chunk | < 1 MB |
-| Chunk per route | ✓ (verify in DevTools) |
 
-If a chunk is unexpectedly large (> 1 MB), check what it imports:
 ```bash
-# Analyse bundle composition (if webpack-bundle-analyzer is available)
-npx webpack-bundle-analyzer dist/stats.json 2>/dev/null || \
-  yarn build --env production --profile 2>/dev/null
+# Analyse bundle composition if a chunk is unexpectedly large
+npx webpack-bundle-analyzer dist/stats.json 2>/dev/null
 ```
 
 ---
 
 ## Step 8: Test the running plugin
 
-Lazy loading can expose runtime errors that were previously hidden by eager loading.
-
 1. Open the plugin in a Grafana instance
-2. Navigate to **every route** in the app — each triggers a new chunk download
-3. Check browser **DevTools → Network → JS** tab: confirm lazy chunks load on navigation, not all upfront
-4. Check browser **Console** for errors
-5. Test any `exposeComponent` extensions from other Grafana apps that use them
+2. Navigate to **every route** — each triggers a new chunk download
+3. **DevTools → Network → JS**: confirm lazy chunks load on navigation, not all upfront
+4. Check **Console** for errors
+5. Test any `exposeComponent` extensions from other Grafana apps
 
----
-
-## Troubleshooting
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| `module.js` barely shrank | Entry point still transitively imports feature code | Read `module.tsx` carefully — any direct import pulls its entire tree in |
-| Route shows blank page | Component is rendered outside its Suspense boundary | Add `<Suspense>` wrapping in the parent, or move the boundary up |
-| Extension crashes | Missing `AppProviders` context | Wrap the default export in the extension file with `<AppProviders>` |
-| Too many chunks (50+) | Every subcomponent split | Use `webpackChunkName` to group related pages |
-| `module.js` barely shrank after rename | Entry point re-exports a singleton (`faro`, analytics) that pulls in its whole init tree | Extract singleton to `src/faro.ts`; `module.tsx` re-exports it with `export { faro } from './faro'` |
-| Circular dependency warning after split | Feature files import from `module.ts` (e.g. `faro`) and module.tsx lazy-imports them back | Extract the exported value to a dedicated file (see singleton note in Step 4) |
-| Build fails after rename | `swc-loader` or `ts-loader` needs tsx support | Ensure `tsconfig.json` has `"jsx": "react-jsx"` and `"tsx"` in the parser config |
-| `lazy()` throws "does not provide an export named 'default'" | Component uses a named export, not a default export | Use `.then(m => ({ default: m.ComponentName }))` (see named export note in Step 4) |
-| Datasource editor blank after split | Suspense missing on `VariableSupport.editor` or `AnnotationSupport.QueryEditor` | Wrap the assigned component with a Suspense boundary (see datasource plugin section) |
-| `React.lazy` not available | Very old React or CommonJS module output | Requires React ≥ 16.6 and `esModuleInterop: true` in tsconfig |
-| Chunks not loading in prod | `output.publicPath` mismatch | Verify `publicPath` in webpack config matches `public/plugins/<PLUGIN_ID>/` |
-| ESLint `import/no-unused-modules` error after rename | `ignoreExports` glob only matches `.ts`, not `.tsx` | Add `'./src/*.tsx'` to `ignoreExports` in eslint config |
-| Chunks cache forever after deploy | `chunkFilename` missing content hash | Add `[contenthash]` to `output.chunkFilename` in webpack config |
-| `setRootPage()` type error after adding `JsonData` generic | `AppPlugin` not parameterised | Use `new AppPlugin<JsonData>()` so `setRootPage()` expects `AppRootProps<JsonData>` |
-| Dev build sizes are huge (multi-MB) | Measuring dev instead of production | Always clean (`rm -rf dist node_modules/.cache`) and build with `--env production` for measurements |
-
-> **rspack compatibility:** All `React.lazy()` / dynamic import patterns work identically with rspack. `webpackChunkName` magic comments are also supported. If the plugin uses `.config/rspack/`, no changes are needed to the build config.
+For troubleshooting common issues, see [references/troubleshooting.md](references/troubleshooting.md).
 
 ---
 
@@ -670,5 +362,5 @@ Lazy loading can expose runtime errors that were previously hidden by eager load
 - [grafana-collector-app](https://github.com/grafana/grafana-collector-app) — app plugin reference implementation
 - [grafana/plugin-actions](https://github.com/grafana/plugin-actions) — official Grafana plugin CI actions
 - [Web.dev — code splitting with lazy and Suspense](https://web.dev/articles/code-splitting-suspense)
-- [SurviveJS — webpack code splitting chapter](https://survivejs.com/books/webpack/building/code-splitting/)
-- [webpack magic comments](https://webpack.js.org/api/module-methods/#magic-comments) — `webpackChunkName` for grouping chunks
+- [SurviveJS — webpack code splitting](https://survivejs.com/books/webpack/building/code-splitting/)
+- [webpack magic comments](https://webpack.js.org/api/module-methods/#magic-comments)

@@ -39,7 +39,11 @@ Fill in the frontmatter and content. See [SKILL.md format](#skillmd-format) belo
 ### Step 2: Validate locally
 
 ```bash
+# Lint against the Agent Skills spec (checks frontmatter, naming, line count, etc.)
 ./scripts/lint-skills.sh skills
+
+# Optional: validate using the official skills-ref tool
+npx skills-ref validate skills/your-skill-name
 ```
 
 Fix any errors or warnings before opening a PR.
