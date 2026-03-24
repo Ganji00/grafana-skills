@@ -1,0 +1,43 @@
+{
+  "name": "grafana-skills",
+  "owner": {
+    "name": "Grafana Labs",
+    "email": "opensource@grafana.com"
+  },
+  "metadata": {
+    "description": "Public skills for working with Grafana, Prometheus, Loki, Tempo, and the broader LGTM stack",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "grafana-core",
+      "source": "./",
+      "description": "Skills for core Grafana concepts — dashboards, panels, PromQL, and visualization",
+      "version": "0.1.0",
+      "category": "grafana",
+      "tags": ["grafana", "dashboards", "promql", "panels"],
+      "skills": []
+    },
+    {
+      "name": "grafana-cloud",
+      "source": "./",
+      "description": "Skills for Grafana Cloud — Loki, Tempo, Pyroscope, and the LGTM observability stack",
+      "version": "0.1.0",
+      "category": "grafana",
+      "tags": ["grafana-cloud", "loki", "tempo", "pyroscope", "lgtm"],
+      "skills": []
+    },
+    {
+      "name": "grafana-plugins",
+      "source": "./",
+      "description": "Skills for building Grafana plugins — bundle optimisation, code splitting, and plugin development",
+      "version": "0.1.0",
+      "category": "grafana",
+      "tags": ["grafana", "plugins", "bundle-size", "webpack", "code-splitting"],
+      "skills": [
+        "./skills/grafana-plugins/plugin-bundle-size",
+        "./skills/grafana-plugins/react-19-plugin-migration"
+      ]
+    }
+  ]
+}
