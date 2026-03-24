@@ -14,14 +14,15 @@ Cursor, and other compatible tools.
 grafana-skills/
 ├── .claude-plugin/marketplace.json   # Claude Code marketplace (lists plugin groups)
 ├── .cursor-plugin/marketplace.json   # Cursor marketplace (identical content)
+├── .agents-plugin/marketplace.json   # Codex marketplace (identical content)
 ├── skills/                           # All skills, grouped by plugin
 │   └── <plugin-name>/<skill-name>/SKILL.md
 ├── template/SKILL.md                 # Starter template
 └── scripts/lint-skills.sh            # Local validation
 ```
 
-- **Single source of truth**: All skill content lives in `skills/`. Both Claude Code and Cursor
-  reference the same files via their respective marketplace manifests.
+- **Single source of truth**: All skill content lives in `skills/`. Claude Code, Cursor, and Codex
+  all reference the same files via their respective marketplace manifests.
 - **Grouped by plugin**: Skills are organized under `skills/<plugin-name>/` matching the plugin
   groups in the marketplace manifests (`grafana-core`, `grafana-cloud`, `grafana-plugins`).
 
@@ -52,10 +53,10 @@ Fix any errors or warnings before opening a PR.
 
 ### Step 3: Register in the marketplace (optional but recommended)
 
-Add the skill path to the appropriate plugin's `skills` array in **both** marketplace files:
+Add the skill path to the appropriate plugin's `skills` array in **all three** marketplace files:
 
 ```json
-// .claude-plugin/marketplace.json  AND  .cursor-plugin/marketplace.json
+// .claude-plugin/marketplace.json  AND  .cursor-plugin/marketplace.json  AND  .agents-plugin/marketplace.json
 {
   "plugins": [
     {
@@ -66,7 +67,7 @@ Add the skill path to the appropriate plugin's `skills` array in **both** market
 }
 ```
 
-Keep both files identical.
+Keep all three files identical.
 
 ### Step 4: Open a PR
 
@@ -155,7 +156,7 @@ Do not include:
 ## Adding a New Plugin Group
 
 If your skill doesn't fit `grafana-core`, `grafana-cloud`, or `grafana-plugins`, you can propose
-a new group by adding it to both marketplace files and updating [README.md](README.md).
+a new group by adding it to all three marketplace files and updating [README.md](README.md).
 
 New groups should represent a coherent, installable collection of related skills.
 

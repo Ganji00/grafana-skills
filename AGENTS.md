@@ -14,6 +14,7 @@ Skills cover Grafana, Prometheus, Loki, Tempo, Pyroscope, k6, and the broader LG
 ```
 .claude-plugin/marketplace.json    # Claude Code marketplace manifest
 .cursor-plugin/marketplace.json    # Cursor marketplace manifest (identical content)
+.agents-plugin/marketplace.json    # Codex marketplace manifest (identical content)
 skills/                            # All skills, grouped by plugin
   <plugin-name>/
     <skill-name>/
@@ -27,8 +28,8 @@ scripts/lint-skills.sh             # Validates SKILL.md files
 
 **Key architecture:**
 
-- Single source of truth in `skills/` — both Claude Code and Cursor reference the same content
-- Dual marketplace manifests (`.claude-plugin/` and `.cursor-plugin/`) with identical content
+- Single source of truth in `skills/` — Claude Code, Cursor, and Codex all reference the same content
+- Three marketplace manifests (`.claude-plugin/`, `.cursor-plugin/`, `.agents-plugin/`) with identical content
 - `skills/` is the conventional directory used by all major agent tools
 
 ## How Skills Work
@@ -126,7 +127,7 @@ Any tool supporting the [Agent Skills](https://agentskills.io) standard or the `
 - Put "When to Use" sections in the skill body (put in `description` frontmatter instead)
 - Add internal Grafana tooling, credentials, or infrastructure-specific content
 - Hardcode script paths — use relative paths or `${CLAUDE_PLUGIN_ROOT}`
-- Edit `.claude-plugin/marketplace.json` without making the identical change to `.cursor-plugin/marketplace.json`
+- Edit `.claude-plugin/marketplace.json` without making the identical change to `.cursor-plugin/marketplace.json` and `.agents-plugin/marketplace.json`
 
 ## Official Resources
 
