@@ -4,7 +4,7 @@
 [![Lint Skills](https://github.com/grafana/skills/actions/workflows/lint-skills.yml/badge.svg)](https://github.com/grafana/skills/actions/workflows/lint-skills.yml)
 
 Public skills for working with Grafana, Prometheus, Loki, Tempo, Pyroscope, k6, and the broader LGTM observability
-stack. Compatible with Claude Code, Cursor, and any tool supporting the
+stack. Compatible with Claude Code, Cursor, Codex, and any tool supporting the
 [Agent Skills](https://agentskills.io) open standard.
 
 ## Installation
@@ -29,6 +29,16 @@ claude plugin install grafana-cloud@grafana-skills
 4. Enter: `https://github.com/grafana/skills`
 
 Skills stay synced with the repository automatically.
+
+### Codex
+
+Skills are discovered automatically via the `.agents-plugin/marketplace.json` manifest. No manual setup needed — Codex loads matching skills based on your task context.
+
+To install manually into a repo's `.agents/skills/` directory:
+
+```bash
+npx skills add grafana/skills
+```
 
 ### npx skills (and other tools)
 
@@ -85,6 +95,7 @@ Quick start:
 grafana-skills/
 ├── .claude-plugin/marketplace.json   # Claude Code marketplace manifest
 ├── .cursor-plugin/marketplace.json   # Cursor marketplace manifest (identical)
+├── .agents-plugin/marketplace.json   # Codex marketplace manifest (identical)
 ├── skills/                           # All skills, grouped by plugin
 │   ├── grafana-core/
 │   ├── grafana-cloud/
