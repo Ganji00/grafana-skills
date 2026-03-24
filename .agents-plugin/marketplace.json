@@ -6,7 +6,8 @@
   },
   "metadata": {
     "description": "Public skills for working with Grafana, Prometheus, Loki, Tempo, and the broader LGTM stack",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "documentation": "This marketplace manifest must remain identical to the plugin manifests in .claude-plugin/ and .cursor-plugin/. Keep all three manifests in sync."
   },
   "plugins": [
     {
