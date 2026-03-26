@@ -9,6 +9,41 @@ stack. Compatible with Claude Code, Cursor, Codex, and any tool supporting the
 
 ## Installation
 
+### npx grafana-skills (recommended)
+
+The official Grafana CLI installs skills directly from this repo with no setup required:
+
+```bash
+# Install all skills in a plugin group
+npx grafana-skills add grafana-plugins
+npx grafana-skills add grafana-core
+npx grafana-skills add grafana-cloud
+
+# Install a single skill
+npx grafana-skills add grafana-plugins --skill plugin-bundle-size
+
+# Target a specific tool only
+npx grafana-skills add grafana-plugins --platform cursor
+
+# See what's available
+npx grafana-skills list
+npx grafana-skills info grafana-plugins
+npx grafana-skills search "bundle"
+
+# Preview without writing files
+npx grafana-skills add grafana-plugins --dry-run
+```
+
+Skills are written to `.claude/skills/` and `.cursor/skills/` in your project root and tracked in `.grafana-skills.lock.json`.
+
+```bash
+# Reinstall from lockfile (useful in CI or after cloning)
+npx grafana-skills install
+
+# Update to latest skills from GitHub
+npx grafana-skills update
+```
+
 ### Claude Code
 
 ```bash
@@ -30,20 +65,9 @@ claude plugin install grafana-cloud@grafana-skills
 
 Skills stay synced with the repository automatically.
 
-### Codex
+### Codex and other tools
 
-Skills are discovered automatically via the `.agents-plugin/marketplace.json` manifest. No manual setup needed — Codex loads matching skills based on your task context.
-
-To install manually into a repo's `.agents/skills/` directory:
-
-```bash
-npx skills add grafana/skills
-```
-
-### npx skills (and other tools)
-
-Any tool using the [vercel-labs/skills](https://github.com/vercel-labs/skills) CLI or the `skills/` directory
-convention can install directly:
+Any tool following the [Agent Skills](https://agentskills.io) standard or the `skills/` directory convention:
 
 ```bash
 npx skills add grafana/skills
@@ -96,15 +120,17 @@ grafana-skills/
 ├── .claude-plugin/marketplace.json   # Claude Code marketplace manifest
 ├── .cursor-plugin/marketplace.json   # Cursor marketplace manifest (identical)
 ├── .agents-plugin/marketplace.json   # Codex marketplace manifest (identical)
+├── skill-registry.json               # Machine-readable manifest for grafana-skills CLI
 ├── skills/                           # All skills, grouped by plugin
 │   ├── grafana-core/
 │   ├── grafana-cloud/
 │   └── grafana-plugins/
 │       ├── plugin-bundle-size/SKILL.md
 │       └── react-19-plugin-migration/SKILL.md
+├── packages/cli/                     # npx grafana-skills CLI source
 ├── template/SKILL.md                 # Starter template for new skills
 ├── scripts/lint-skills.sh            # Local skill validation
-└── .github/workflows/                # CI validation
+└── .github/workflows/                # CI validation + CLI publish
 ```
 
 ## License

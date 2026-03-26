@@ -1,0 +1,38 @@
+name: Publish CLI
+
+on:
+  push:
+    tags:
+      - 'cli/v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        working-directory: packages/cli
+        run: npm install
+
+      - name: Build
+        working-directory: packages/cli
+        env:
+          OTLP_ENDPOINT: ${{ secrets.OTLP_ENDPOINT }}
+          OTLP_AUTH_HEADER: ${{ secrets.OTLP_AUTH_HEADER }}
+        run: npm run build
+
+      - name: Publish to npm
+        working-directory: packages/cli
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
