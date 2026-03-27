@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: packages/cli
-        run: npm install
+        run: npm ci
 
       - name: Build
         working-directory: packages/cli
