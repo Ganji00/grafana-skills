@@ -9,39 +9,47 @@ stack. Compatible with Claude Code, Cursor, Codex, and any tool supporting the
 
 ## Installation
 
-### npx grafana-skills (recommended)
+### npx @grafana/grafana-skills (recommended)
 
-The official Grafana CLI installs skills directly from this repo with no setup required:
+The official Grafana CLI installs skills directly from this repo with no setup required.
+
+First, point npm at GitHub Packages for the `@grafana` scope (one-time setup):
+
+```bash
+npm config set @grafana:registry https://npm.pkg.github.com
+```
+
+Then use the CLI:
 
 ```bash
 # Install all skills in a plugin group
-npx grafana-skills add grafana-plugins
-npx grafana-skills add grafana-core
-npx grafana-skills add grafana-cloud
+npx @grafana/grafana-skills add grafana-plugins
+npx @grafana/grafana-skills add grafana-core
+npx @grafana/grafana-skills add grafana-cloud
 
 # Install a single skill
-npx grafana-skills add grafana-plugins --skill plugin-bundle-size
+npx @grafana/grafana-skills add grafana-plugins --skill plugin-bundle-size
 
 # Target a specific tool only
-npx grafana-skills add grafana-plugins --platform cursor
+npx @grafana/grafana-skills add grafana-plugins --platform cursor
 
 # See what's available
-npx grafana-skills list
-npx grafana-skills info grafana-plugins
-npx grafana-skills search "bundle"
+npx @grafana/grafana-skills list
+npx @grafana/grafana-skills info grafana-plugins
+npx @grafana/grafana-skills search "bundle"
 
 # Preview without writing files
-npx grafana-skills add grafana-plugins --dry-run
+npx @grafana/grafana-skills add grafana-plugins --dry-run
 ```
 
 Skills are written to `.claude/skills/` and `.cursor/skills/` in your project root and tracked in `.grafana-skills.lock.json`.
 
 ```bash
 # Reinstall from lockfile (useful in CI or after cloning)
-npx grafana-skills install
+npx @grafana/grafana-skills install
 
 # Update to latest skills from GitHub
-npx grafana-skills update
+npx @grafana/grafana-skills update
 ```
 
 ### Claude Code

@@ -1,5 +1,5 @@
 {
-  "name": "grafana-skills",
+  "name": "@grafana/grafana-skills",
   "version": "0.1.0",
   "description": "Install Grafana AI agent skills into your project",
   "bin": {
@@ -33,7 +33,7 @@
     "@types/tar": "7.0.87"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
+    "registry": "https://npm.pkg.github.com",
     "access": "public"
   },
   "engines": {

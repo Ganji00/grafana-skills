@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+  packages: write
 
 jobs:
   publish:
@@ -18,7 +18,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@grafana'
 
       - name: Install dependencies
         working-directory: packages/cli
@@ -31,8 +32,8 @@ jobs:
           OTLP_AUTH_HEADER: ${{ secrets.OTLP_AUTH_HEADER }}
         run: npm run build
 
-      - name: Publish to npm
+      - name: Publish to GitHub Packages
         working-directory: packages/cli
         run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
