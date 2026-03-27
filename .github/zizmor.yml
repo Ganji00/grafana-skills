@@ -1,0 +1,4 @@
+rules:
+  cache-poisoning:
+    ignore:
+      - publish-cli.yml
