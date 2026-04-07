@@ -9,6 +9,14 @@ stack. Compatible with Claude Code, Cursor, Codex, and any tool supporting the
 
 ## Installation
 
+### npx skills (recommended for most tools)
+
+Any tool following the [Agent Skills](https://agentskills.io) standard can install directly:
+
+```bash
+npx skills add grafana/skills
+```
+
 ### Claude Code
 
 ```bash
@@ -30,20 +38,11 @@ claude plugin install grafana-cloud@grafana-skills
 
 Skills stay synced with the repository automatically.
 
-### Codex
+### Codex and other Agent Skills tools
 
 Skills are discovered automatically via the `.agents-plugin/marketplace.json` manifest. No manual setup needed — Codex loads matching skills based on your task context.
 
 To install manually into a repo's `.agents/skills/` directory:
-
-```bash
-npx skills add grafana/skills
-```
-
-### npx skills (and other tools)
-
-Any tool using the [vercel-labs/skills](https://github.com/vercel-labs/skills) CLI or the `skills/` directory
-convention can install directly:
 
 ```bash
 npx skills add grafana/skills

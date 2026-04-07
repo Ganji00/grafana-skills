@@ -1,0 +1,35 @@
+{
+  "name": "grafana-skills",
+  "version": "0.1.0",
+  "repository": "https://github.com/grafana/skills",
+  "plugins": [
+    {
+      "name": "grafana-plugins",
+      "description": "Skills for building Grafana plugins — bundle optimisation, code splitting, and plugin development",
+      "skills": [
+        {
+          "name": "plugin-bundle-size",
+          "description": "Optimise Grafana app plugin bundle size using React.lazy, Suspense, and webpack code splitting. Use when the user asks to reduce plugin bundle size, fix large bundles, or split plugin code.",
+          "path": "skills/grafana-plugins/plugin-bundle-size",
+          "tags": ["plugins", "bundle-size", "webpack", "react", "performance"]
+        },
+        {
+          "name": "react-19-plugin-migration",
+          "description": "Migrate a Grafana plugin to React 19 compatibility. Use when the user asks to update a plugin for React 19, fix React 19 build errors, or prepare a plugin for Grafana 12.",
+          "path": "skills/grafana-plugins/react-19-plugin-migration",
+          "tags": ["plugins", "react", "migration", "react-19"]
+        }
+      ]
+    },
+    {
+      "name": "grafana-core",
+      "description": "Core Grafana concepts — dashboards, panels, PromQL, and visualization",
+      "skills": []
+    },
+    {
+      "name": "grafana-cloud",
+      "description": "Grafana Cloud — Loki, Tempo, Pyroscope, and the LGTM observability stack",
+      "skills": []
+    }
+  ]
+}
