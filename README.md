@@ -80,6 +80,17 @@ Open-source LGTM observability stack — Loki, Tempo, Prometheus/Mimir, and Pyro
 | `prometheus` | Metrics with Prometheus — PromQL, alerting, recording rules, and Mimir |
 | `pyroscope` | Continuous profiling with Grafana Pyroscope — flame graphs, diff views, and language support |
 
+### grafana-lgtm
+
+Open-source LGTM observability stack — Loki, Tempo, Prometheus/Mimir, and Pyroscope.
+
+| Skill | Description |
+|-------|-------------|
+| `loki` | Log aggregation with Grafana Loki — LogQL queries, pipelines, and architecture |
+| `tempo` | Distributed tracing with Grafana Tempo — TraceQL, service graphs, and correlations |
+| `prometheus` | Metrics with Prometheus — PromQL, alerting, recording rules, and Mimir |
+| `pyroscope` | Continuous profiling with Grafana Pyroscope — flame graphs, diff views, and language support |
+
 ### grafana-plugins
 
 Skills for building Grafana plugins — bundle optimisation, code splitting, React 19 migration, and the @grafana/scenes framework.
