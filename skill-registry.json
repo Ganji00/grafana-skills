@@ -35,7 +35,14 @@
     {
       "name": "grafana-cloud",
       "description": "Grafana Cloud — fleet management, cloud integrations, adaptive metrics, and AI agent connectivity",
-      "skills": []
+      "skills": [
+        {
+          "name": "dpm-finder",
+          "description": "Grafana Professional Services tool for identifying which Prometheus metrics drive high Data Points per Minute (DPM). Analyzes metric-level DPM with per-label breakdown to help optimize Grafana Cloud costs. Use when the user asks about DPM analysis, high-cardinality metrics, metric cost optimization, finding noisy metrics, or running dpm-finder.",
+          "path": "skills/grafana-cloud/dpm-finder",
+          "tags": ["grafana-cloud", "dpm", "metrics", "cost-optimization", "prometheus", "professional-services"]
+        }
+      ]
     },
     {
       "name": "grafana-lgtm",
